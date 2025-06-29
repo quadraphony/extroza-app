@@ -57,98 +57,100 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // We use Consumer to get the ThemeNotifier and rebuild when it changes.
     final themeNotifier = Provider.of<ThemeNotifier>(context);
-
-    // Dummy data
     const String userName = "Leeroy";
     const String userStatus = "Available";
     const String userAvatarUrl = "https://placehold.co/100x100/3A76F0/FFFFFF?text=L";
 
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            floating: true,
-            pinned: true,
-            snap: true,
-            expandedHeight: 200.0,
-            flexibleSpace: FlexibleSpaceBar(
-              title: const Text('Settings'),
-              background: Container(
-                color: Theme.of(context).appBarTheme.backgroundColor,
+      // We use a simple, invisible AppBar to handle the status bar area correctly.
+      appBar: AppBar(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        elevation: 0,
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // --- NEW LAYOUT: Title in the main content area ---
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Text(
+                'Settings',
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineLarge
+                    ?.copyWith(fontWeight: FontWeight.bold),
               ),
             ),
-          ),
-          SliverList(
-            delegate: SliverChildListDelegate(
-              [
-                const SizedBox(height: 20),
-                _ProfileHeader(
-                  avatarUrl: userAvatarUrl,
-                  name: userName,
-                  status: userStatus,
-                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileEditScreen())),
-                ),
-                const SizedBox(height: 30),
-                _SettingsSection(
+            const SizedBox(height: 24),
+
+            // --- Profile Section ---
+            _ProfileHeader(
+              avatarUrl: userAvatarUrl,
+              name: userName,
+              status: userStatus,
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileEditScreen())),
+            ),
+            const SizedBox(height: 30),
+
+            // The rest of the settings list remains the same
+            _SettingsSection(
+              title: 'Account',
+              tiles: [
+                _SettingsTile(
+                  icon: Icons.key_rounded,
                   title: 'Account',
-                  tiles: [
-                    _SettingsTile(
-                      icon: Icons.key_rounded,
-                      title: 'Account',
-                      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AccountSettingsScreen())),
-                    ),
-                    _SettingsTile(
-                      icon: Icons.lock_person_rounded,
-                      title: 'Privacy',
-                      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PrivacySettingsScreen())),
-                    ),
-                  ],
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AccountSettingsScreen())),
                 ),
-                _SettingsSection(
-                  title: 'Appearance',
-                  tiles: [
-                    _SettingsTile(
-                      icon: Icons.palette_rounded,
-                      title: 'Chats',
-                      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ChatSettingsScreen())),
-                    ),
-                    _SettingsTile(
-                      icon: Icons.dark_mode_rounded,
-                      title: 'Theme',
-                      subtitle: themeNotifier.currentThemeName, // This will update automatically!
-                      onTap: () => _showThemeDialog(context, themeNotifier),
-                    ),
-                  ],
+                _SettingsTile(
+                  icon: Icons.lock_person_rounded,
+                  title: 'Privacy',
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PrivacySettingsScreen())),
                 ),
-                 _SettingsSection(
-                  title: 'Help & Information',
-                  tiles: [
-                     _SettingsTile(
-                      icon: Icons.info_outline_rounded,
-                      title: 'About Extroza',
-                      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AboutScreen())),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 30),
-                Center(
-                  child: TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(builder: (context) => const WelcomeScreen()),
-                        (route) => false,
-                      );
-                    },
-                    child: const Text('Sign Out'),
-                  ),
-                ),
-                const SizedBox(height: 40),
               ],
             ),
-          ),
-        ],
+            _SettingsSection(
+              title: 'Appearance',
+              tiles: [
+                _SettingsTile(
+                  icon: Icons.palette_rounded,
+                  title: 'Chats',
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ChatSettingsScreen())),
+                ),
+                _SettingsTile(
+                  icon: Icons.dark_mode_rounded,
+                  title: 'Theme',
+                  subtitle: themeNotifier.currentThemeName,
+                  onTap: () => _showThemeDialog(context, themeNotifier),
+                ),
+              ],
+            ),
+            _SettingsSection(
+              title: 'Help & Information',
+              tiles: [
+                _SettingsTile(
+                  icon: Icons.info_outline_rounded,
+                  title: 'About Extroza',
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AboutScreen())),
+                ),
+              ],
+            ),
+            const SizedBox(height: 30),
+            Center(
+              child: TextButton(
+                onPressed: () {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (context) => const WelcomeScreen()),
+                    (route) => false,
+                  );
+                },
+                child: const Text('Sign Out'),
+              ),
+            ),
+            const SizedBox(height: 40),
+          ],
+        ),
       ),
     );
   }
