@@ -50,7 +50,6 @@ class DefaultFirebaseOptions {
   );
   // --- END OF NEW SECTION ---
 
-
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'AIzaSyD0MnJA1EvyheFKWyOsUmJka40WMowCO_o',
     appId: '1:925103203417:web:592fade228724e60ecbd48',
@@ -96,4 +95,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'extroza-app.firebasestorage.app',
     measurementId: 'G-53DCSYK83E',
   );
+
 }
