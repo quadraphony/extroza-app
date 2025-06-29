@@ -1,11 +1,57 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:extroza/features/auth/screens/otp_screen.dart';
+import 'package:extroza/features/chats/screens/chats_screen.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
-  // This function will handle the entire phone sign-in process
+  // --- NEW: Google Sign-In Method ---
+  Future<void> signInWithGoogle(BuildContext context) async {
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        // The user canceled the sign-in
+        return;
+      }
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      await _auth.signInWithCredential(credential);
+
+      // Navigate to Chats screen after successful sign-in
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const ChatsScreen()),
+        (route) => false,
+      );
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Google Sign-In Failed: ${e.message}')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('An unexpected error occurred: $e')),
+      );
+    }
+  }
+
+  // --- Sign Out Method (for testing) ---
+  Future<void> signOut(BuildContext context) async {
+    await _googleSignIn.signOut();
+    await _auth.signOut();
+    // After signing out, you might want to navigate to the welcome screen
+    // This part will be handled by our new AuthWrapper.
+  }
+
+
+  // --- Existing Phone Auth Method (we'll keep it for later) ---
   Future<void> sendOtpToPhone({
     required BuildContext context,
     required String phoneNumber,
@@ -14,33 +60,22 @@ class AuthService {
     
     await _auth.verifyPhoneNumber(
       phoneNumber: phoneNumber,
-      // (A) This is called when verification is successful automatically
-      // This is rare and happens only on some Android devices.
       verificationCompleted: (PhoneAuthCredential credential) async {
         await _auth.signInWithCredential(credential);
-        // TODO: Navigate to HomeScreen
       },
-      // (B) This is called if there is an error
       verificationFailed: (FirebaseAuthException e) {
         scaffoldMessenger.showSnackBar(
           SnackBar(content: Text('Verification Failed: ${e.message}')),
         );
       },
-      // (C) This is the most important one for us. It's called when the SMS
-      // has been sent from Firebase to the user's phone.
       codeSent: (String verificationId, int? resendToken) {
-        // We navigate to the OTP screen and pass the verificationId
-        // so we can use it to verify the code the user enters.
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) => OTPScreen(verificationId: verificationId),
           ),
         );
       },
-      // (D) This handles timeouts.
-      codeAutoRetrievalTimeout: (String verificationId) {
-        // You could handle this if needed, for now we'll do nothing.
-      },
+      codeAutoRetrievalTimeout: (String verificationId) {},
     );
   }
 }

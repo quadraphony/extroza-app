@@ -1,22 +1,25 @@
+import 'package:extroza/core/theme/theme_notifier.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart'; // Make sure this is imported
-import 'firebase_options.dart';                   // Make sure this is imported
+import 'package:firebase_core/firebase_core.dart';
+import 'package:provider/provider.dart';
+import 'firebase_options.dart';
 import 'package:extroza/core/theme/app_theme.dart';
 import 'package:extroza/features/auth/screens/welcome_screen.dart';
 
-// The 'async' keyword is essential here
 void main() async {
-  // This line is required to ensure everything is ready before using plugins
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // This line is the most important one. 'await' tells the app to wait
-  // until Firebase is fully initialized before continuing.
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
   
-  // This line only runs AFTER Firebase is ready.
-  runApp(const ExtrozaApp());
+  // We wrap our entire app with the ChangeNotifierProvider.
+  // This makes the ThemeNotifier available everywhere in the app.
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ThemeNotifier(),
+      child: const ExtrozaApp(),
+    ),
+  );
 }
 
 class ExtrozaApp extends StatelessWidget {
@@ -24,13 +27,19 @@ class ExtrozaApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Extroza',
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
-      debugShowCheckedModeBanner: false,
-      home: const WelcomeScreen(),
+    // We use a Consumer widget to listen to changes in our ThemeNotifier.
+    return Consumer<ThemeNotifier>(
+      builder: (context, themeNotifier, child) {
+        return MaterialApp(
+          title: 'Extroza',
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          // The themeMode is now controlled by our ThemeNotifier.
+          themeMode: themeNotifier.themeMode,
+          debugShowCheckedModeBanner: false,
+          home: const WelcomeScreen(),
+        );
+      },
     );
   }
 }

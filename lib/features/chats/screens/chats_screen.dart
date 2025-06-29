@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+class ChatsScreen extends StatelessWidget {
+  const ChatsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +30,7 @@ class HomeScreen extends StatelessWidget {
         onPressed: () {
           // TODO: Navigate to contacts screen
         },
-        child: const Icon(Icons.chat_outlined),
+        child: const Icon(Icons.message_rounded),
       ),
     );
   }
