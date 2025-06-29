@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "925103203417",
+    "project_id": "extroza-app",
+    "storage_bucket": "extroza-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:925103203417:android:5a63b27fe16e222becbd48",
+        "android_client_info": {
+          "package_name": "com.example.extroza"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCSjDNOIisJYKZDwK81gdF18RQXG_XNbzk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
