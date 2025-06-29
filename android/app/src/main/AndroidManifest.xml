@@ -2,6 +2,7 @@
 
     <!-- Permissions: We are asking for permission to use the camera -->
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
 
     <application
         android:label="extroza"

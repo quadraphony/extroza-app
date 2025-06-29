@@ -1,5 +1,5 @@
-// This class represents a single conversation in the chat list.
 class Chat {
+  final String otherUserId; // The unique ID of the person we are chatting with
   final String avatarUrl;
   final String name;
   final String lastMessage;
@@ -8,6 +8,7 @@ class Chat {
   final bool isMuted;
 
   const Chat({
+    required this.otherUserId,
     required this.avatarUrl,
     required this.name,
     required this.lastMessage,

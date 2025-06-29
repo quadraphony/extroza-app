@@ -17,18 +17,25 @@ class IndividualChatScreen extends StatefulWidget {
 class _IndividualChatScreenState extends State<IndividualChatScreen> {
   final TextEditingController _textController = TextEditingController();
   final ChatService _chatService = ChatService();
-  final String _currentUserId = 'user_1_leeroy';
+  final String _currentUserId = 'user_1_leeroy'; // Our hardcoded user ID
+
+  // --- DYNAMIC CHAT ID ---
+  late final String _chatId;
 
   @override
   void initState() {
     super.initState();
-    // When the screen loads, mark incoming messages as read.
-    _chatService.markMessagesAsRead('extroza_team_chat', _currentUserId);
+    // Create the unique chat ID when the screen loads
+    _chatId = _chatService.getChatId(_currentUserId, widget.chat.otherUserId);
+    
+    // Mark messages as read for this specific chat
+    _chatService.markMessagesAsRead(_chatId, _currentUserId);
   }
 
   void _handleSendPressed() {
     if (_textController.text.isNotEmpty) {
-      _chatService.sendMessage('extroza_team_chat', _textController.text);
+      // Send message to the dynamic chat ID
+      _chatService.sendMessage(_chatId, _textController.text, _currentUserId);
       _textController.clear();
     }
   }
@@ -45,7 +52,8 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
           TextButton(
             onPressed: () {
               if (editController.text.isNotEmpty) {
-                _chatService.editMessage('extroza_team_chat', message.id, editController.text);
+                // Use the dynamic chat ID
+                _chatService.editMessage(_chatId, message.id, editController.text);
                 Navigator.of(context).pop();
               }
             },
@@ -58,7 +66,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
 
   void _showMessageOptions(BuildContext context, Message message) {
     if (message.isDeleted) return;
-
     final isMyMessage = message.senderId == _currentUserId;
     final canDeleteForEveryone = DateTime.now().difference(message.timestamp.toDate()).inMinutes < 15;
 
@@ -92,7 +99,8 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
                   title: const Text('Delete for Everyone'),
                   enabled: canDeleteForEveryone,
                   onTap: canDeleteForEveryone ? () {
-                    _chatService.deleteMessageForEveryone('extroza_team_chat', message.id);
+                    // Use the dynamic chat ID
+                    _chatService.deleteMessageForEveryone(_chatId, message.id);
                     Navigator.of(context).pop();
                   } : null,
                 ),
@@ -137,7 +145,8 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
         children: [
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: _chatService.getMessagesStream('extroza_team_chat'),
+              // Listen to the dynamic chat ID
+              stream: _chatService.getMessagesStream(_chatId),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -148,9 +157,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
                 if (snapshot.hasError) {
                   return const Center(child: Text('Something went wrong...'));
                 }
-
                 final messages = snapshot.data!.docs;
-
                 return ListView.builder(
                   reverse: true,
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -158,7 +165,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
                   itemBuilder: (context, index) {
                     final message = Message.fromFirestore(messages[index]);
                     final bool isSentByMe = message.senderId == _currentUserId;
-
                     bool showDateSeparator = false;
                     if (index < messages.length - 1) {
                       final prevMessage = Message.fromFirestore(messages[index + 1]);
@@ -172,7 +178,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
                     } else {
                       showDateSeparator = true;
                     }
-
                     return Column(
                       children: [
                         if (showDateSeparator)

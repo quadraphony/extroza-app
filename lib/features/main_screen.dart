@@ -1,7 +1,7 @@
 import 'package:extroza/features/calls/screens/calls_screen.dart';
 import 'package:extroza/features/chats/screens/chats_screen.dart';
 import 'package:extroza/features/settings/screens/settings_screen.dart';
-import 'package:flutter/material.dart'; // THIS LINE IS NOW CORRECT
+import 'package:flutter/material.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -31,25 +31,35 @@ class _MainScreenState extends State<MainScreen> {
       body: Center(
         child: _widgetOptions.elementAt(_selectedIndex),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_rounded),
+      // --- UPDATED WIDGET ---
+      // We are now using the Material 3 NavigationBar
+      bottomNavigationBar: NavigationBar(
+        // The selectedIndex determines which tab is active.
+        selectedIndex: _selectedIndex,
+        // The onDestinationSelected callback updates the state when a new tab is tapped.
+        onDestinationSelected: _onItemTapped,
+        // The indicatorColor gives the "pill" shape its color.
+        indicatorColor: Theme.of(context).colorScheme.primaryContainer,
+        // The list of destinations (tabs).
+        destinations: const <NavigationDestination>[
+          NavigationDestination(
+            // The icon to show when the tab is selected.
+            selectedIcon: Icon(Icons.chat_bubble_rounded),
+            // The icon to show when the tab is not selected.
+            icon: Icon(Icons.chat_bubble_outline_rounded),
             label: 'Chats',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.call_rounded),
+          NavigationDestination(
+            selectedIcon: Icon(Icons.call_rounded),
+            icon: Icon(Icons.call_outlined),
             label: 'Calls',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings_rounded),
+          NavigationDestination(
+            selectedIcon: Icon(Icons.settings_rounded),
+            icon: Icon(Icons.settings_outlined),
             label: 'Settings',
           ),
         ],
-        currentIndex: _selectedIndex,
-        selectedItemColor: Theme.of(context).primaryColor,
-        onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed, // Good for 3+ items
       ),
     );
   }

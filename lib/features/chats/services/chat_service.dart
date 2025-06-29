@@ -3,6 +3,18 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class ChatService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  // --- NEW: Helper function to create a unique chat ID ---
+  String getChatId(String userId1, String userId2) {
+    // Sort the user IDs alphabetically to ensure consistency.
+    // This makes sure that the chat ID between user A and user B is the same
+    // regardless of who initiates the chat.
+    if (userId1.compareTo(userId2) > 0) {
+      return '$userId1-$userId2';
+    } else {
+      return '$userId2-$userId1';
+    }
+  }
+
   // --- GET MESSAGES STREAM ---
   Stream<QuerySnapshot> getMessagesStream(String chatId) {
     return _firestore
@@ -14,15 +26,14 @@ class ChatService {
   }
 
   // --- SEND MESSAGE ---
-  Future<void> sendMessage(String chatId, String text) async {
-    final String currentUserId = 'user_1_leeroy'; 
-
+  // Updated to accept the current user's ID
+  Future<void> sendMessage(String chatId, String text, String currentUserId) async {
     final Message newMessage = Message(
       id: '', // Firestore will generate this
       senderId: currentUserId,
       text: text,
       timestamp: Timestamp.now(),
-      isRead: false, // New messages start as unread
+      isRead: false,
     );
 
     await _firestore
@@ -32,7 +43,7 @@ class ChatService {
         .add(newMessage.toJson());
   }
 
-  // --- NEW: MARK MESSAGES AS READ ---
+  // --- MARK MESSAGES AS READ ---
   Future<void> markMessagesAsRead(String chatId, String currentUserId) async {
     final querySnapshot = await _firestore
         .collection('chats')
@@ -49,7 +60,7 @@ class ChatService {
     await batch.commit();
   }
 
-  // --- EDIT & DELETE (No changes needed here) ---
+  // --- EDIT & DELETE ---
   Future<void> editMessage(String chatId, String messageId, String newText) async {
     await _firestore.collection('chats').doc(chatId).collection('messages').doc(messageId).update({'text': newText, 'isEdited': true});
   }
@@ -67,7 +78,7 @@ class Message {
   final Timestamp timestamp;
   final bool isEdited;
   final bool isDeleted;
-  final bool isRead; // New field for read status
+  final bool isRead;
 
   Message({
     required this.id,
@@ -76,7 +87,7 @@ class Message {
     required this.timestamp,
     this.isEdited = false,
     this.isDeleted = false,
-    this.isRead = false, // Default to false
+    this.isRead = false,
   });
 
   factory Message.fromFirestore(DocumentSnapshot doc) {
@@ -88,7 +99,7 @@ class Message {
       timestamp: data['timestamp'] ?? Timestamp.now(),
       isEdited: data['isEdited'] ?? false,
       isDeleted: data['isDeleted'] ?? false,
-      isRead: data['isRead'] ?? false, // Read the new field
+      isRead: data['isRead'] ?? false,
     );
   }
 
@@ -99,7 +110,7 @@ class Message {
       'timestamp': timestamp,
       'isEdited': isEdited,
       'isDeleted': isDeleted,
-      'isRead': isRead, 
+      'isRead': isRead,
     };
   }
 }
