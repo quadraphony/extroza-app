@@ -1,81 +1,92 @@
+import 'package:extroza/core/services/database_service.dart';
+import 'package:extroza/models/user_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:extroza/features/auth/screens/otp_screen.dart';
-import 'package:extroza/features/chats/screens/chats_screen.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final DatabaseService _db = DatabaseService();
 
-  // --- NEW: Google Sign-In Method ---
-  Future<void> signInWithGoogle(BuildContext context) async {
+  /// Signs up a new user with their profile information.
+  Future<void> signUpWithUsernameAndPassword({
+    required BuildContext context,
+    required String fullName,
+    required String username,
+    required String password,
+    required String nickname,
+    String? bio,
+    String? ageRange,
+    String? gender,
+  }) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
-        // The user canceled the sign-in
-        return;
+      // Remove the leading '@' if it exists before creating the dummy email.
+      final String formattedUsername = username.startsWith('@') ? username.substring(1) : username;
+      final String email = '$formattedUsername@extroza.app';
+
+      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      User? user = userCredential.user;
+
+      if (user != null) {
+        // Create a user model with the provided information
+        UserModel newUser = UserModel(
+          uid: user.uid,
+          fullName: fullName,
+          username: username, // Store the original username with the '@'
+          nickname: nickname,
+          bio: bio,
+          ageRange: ageRange,
+          gender: gender,
+        );
+        
+        // Save the new user's profile to Firestore
+        await _db.createUserProfile(newUser);
+
+        // The AuthWrapper will automatically navigate to the MainScreen
       }
-
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-      final AuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      await _auth.signInWithCredential(credential);
-
-      // Navigate to Chats screen after successful sign-in
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const ChatsScreen()),
-        (route) => false,
-      );
     } on FirebaseAuthException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Google Sign-In Failed: ${e.message}')),
+      scaffoldMessenger.showSnackBar(
+        SnackBar(content: Text('Sign-up Failed: ${e.message}')),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
+       scaffoldMessenger.showSnackBar(
         SnackBar(content: Text('An unexpected error occurred: $e')),
       );
     }
   }
 
-  // --- Sign Out Method (for testing) ---
-  Future<void> signOut(BuildContext context) async {
-    await _googleSignIn.signOut();
-    await _auth.signOut();
-    // After signing out, you might want to navigate to the welcome screen
-    // This part will be handled by our new AuthWrapper.
+  /// Signs in a user with their username and password.
+  Future<void> signInWithUsernameAndPassword({
+    required BuildContext context,
+    required String username,
+    required String password,
+  }) async {
+     final scaffoldMessenger = ScaffoldMessenger.of(context);
+     try {
+       // Remove the leading '@' if it exists before creating the dummy email.
+       final String formattedUsername = username.startsWith('@') ? username.substring(1) : username;
+       final String email = '$formattedUsername@extroza.app';
+       
+       await _auth.signInWithEmailAndPassword(email: email, password: password);
+       // The AuthWrapper will handle navigation to the MainScreen on success.
+     } on FirebaseAuthException catch (e) {
+        scaffoldMessenger.showSnackBar(
+        SnackBar(content: Text('Login Failed: ${e.message}')),
+      );
+     } catch (e) {
+        scaffoldMessenger.showSnackBar(
+        SnackBar(content: Text('An unexpected error occurred: $e')),
+      );
+     }
   }
 
-
-  // --- Existing Phone Auth Method (we'll keep it for later) ---
-  Future<void> sendOtpToPhone({
-    required BuildContext context,
-    required String phoneNumber,
-  }) async {
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    
-    await _auth.verifyPhoneNumber(
-      phoneNumber: phoneNumber,
-      verificationCompleted: (PhoneAuthCredential credential) async {
-        await _auth.signInWithCredential(credential);
-      },
-      verificationFailed: (FirebaseAuthException e) {
-        scaffoldMessenger.showSnackBar(
-          SnackBar(content: Text('Verification Failed: ${e.message}')),
-        );
-      },
-      codeSent: (String verificationId, int? resendToken) {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => OTPScreen(verificationId: verificationId),
-          ),
-        );
-      },
-      codeAutoRetrievalTimeout: (String verificationId) {},
-    );
+  /// Signs the current user out.
+  Future<void> signOut() async {
+    await _auth.signOut();
+    // The AuthWrapper will handle navigation to the WelcomeScreen.
   }
 }
