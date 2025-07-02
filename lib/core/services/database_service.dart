@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:extroza/models/user_model.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 /// A service class to handle all Firestore database operations.
 class DatabaseService {
@@ -8,13 +9,11 @@ class DatabaseService {
   final String _usersCollection = 'users';
 
   /// Creates a new user profile document in the 'users' collection.
-  /// The document ID will be the user's unique ID (UID) from Firebase Auth.
   Future<void> createUserProfile(UserModel user) async {
     try {
       await _db.collection(_usersCollection).doc(user.uid).set(user.toMap());
     } catch (e) {
       print('Error creating user profile: $e');
-      // In a real app, you might want to show an error message to the user.
     }
   }
 
@@ -31,8 +30,23 @@ class DatabaseService {
     return null;
   }
 
+  /// Fetches a list of all users from the database, excluding the current user.
+  Future<List<UserModel>> getUsers() async {
+    try {
+      final String? currentUserId = FirebaseAuth.instance.currentUser?.uid;
+      QuerySnapshot snapshot = await _db.collection(_usersCollection).get();
+      
+      return snapshot.docs
+          .map((doc) => UserModel.fromFirestore(doc))
+          .where((user) => user.uid != currentUserId) // Exclude current user
+          .toList();
+    } catch (e) {
+      print('Error getting users: $e');
+      return [];
+    }
+  }
+
   /// Updates a user's profile data in Firestore.
-  /// [data] is a map of the fields to update, e.g., {'bio': 'New bio'}.
   Future<void> updateUserProfile(String uid, Map<String, dynamic> data) async {
      try {
       await _db.collection(_usersCollection).doc(uid).update(data);

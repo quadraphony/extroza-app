@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:extroza/features/chats/models/chat_model.dart';
 import 'package:extroza/features/chats/services/chat_service.dart';
 import 'package:extroza/features/chats/widgets/message_bubble.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -17,25 +18,21 @@ class IndividualChatScreen extends StatefulWidget {
 class _IndividualChatScreenState extends State<IndividualChatScreen> {
   final TextEditingController _textController = TextEditingController();
   final ChatService _chatService = ChatService();
-  final String _currentUserId = 'user_1_leeroy'; // Our hardcoded user ID
+  final String _currentUserId = FirebaseAuth.instance.currentUser!.uid; 
 
-  // --- DYNAMIC CHAT ID ---
   late final String _chatId;
 
   @override
   void initState() {
     super.initState();
-    // Create the unique chat ID when the screen loads
     _chatId = _chatService.getChatId(_currentUserId, widget.chat.otherUserId);
-    
-    // Mark messages as read for this specific chat
     _chatService.markMessagesAsRead(_chatId, _currentUserId);
   }
 
   void _handleSendPressed() {
     if (_textController.text.isNotEmpty) {
-      // Send message to the dynamic chat ID
-      _chatService.sendMessage(_chatId, _textController.text, _currentUserId);
+      // Pass the recipient's ID to the service
+      _chatService.sendMessage(_chatId, _textController.text, widget.chat.otherUserId);
       _textController.clear();
     }
   }
@@ -52,7 +49,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
           TextButton(
             onPressed: () {
               if (editController.text.isNotEmpty) {
-                // Use the dynamic chat ID
                 _chatService.editMessage(_chatId, message.id, editController.text);
                 Navigator.of(context).pop();
               }
@@ -99,7 +95,6 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
                   title: const Text('Delete for Everyone'),
                   enabled: canDeleteForEveryone,
                   onTap: canDeleteForEveryone ? () {
-                    // Use the dynamic chat ID
                     _chatService.deleteMessageForEveryone(_chatId, message.id);
                     Navigator.of(context).pop();
                   } : null,
@@ -145,14 +140,13 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
         children: [
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              // Listen to the dynamic chat ID
               stream: _chatService.getMessagesStream(_chatId),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(child: Text('No messages yet. Say hi!'));
+                  return Center(child: Text('No messages yet. Say hi to ${widget.chat.name}!'));
                 }
                 if (snapshot.hasError) {
                   return const Center(child: Text('Something went wrong...'));

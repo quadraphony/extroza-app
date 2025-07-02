@@ -1,13 +1,22 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ChatService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // --- NEW: Helper function to create a unique chat ID ---
+  // --- GET CHATS STREAM ---
+  /// Gets a real-time stream of chats for the current user.
+  Stream<QuerySnapshot> getChatsStream() {
+    final String currentUserId = _auth.currentUser!.uid;
+    return _firestore
+        .collection('chats')
+        .where('participants', arrayContains: currentUserId)
+        .orderBy('lastMessageTimestamp', descending: true)
+        .snapshots();
+  }
+
   String getChatId(String userId1, String userId2) {
-    // Sort the user IDs alphabetically to ensure consistency.
-    // This makes sure that the chat ID between user A and user B is the same
-    // regardless of who initiates the chat.
     if (userId1.compareTo(userId2) > 0) {
       return '$userId1-$userId2';
     } else {
@@ -15,7 +24,6 @@ class ChatService {
     }
   }
 
-  // --- GET MESSAGES STREAM ---
   Stream<QuerySnapshot> getMessagesStream(String chatId) {
     return _firestore
         .collection('chats')
@@ -26,24 +34,35 @@ class ChatService {
   }
 
   // --- SEND MESSAGE ---
-  // Updated to accept the current user's ID
-  Future<void> sendMessage(String chatId, String text, String currentUserId) async {
+  /// Sends a message and updates the chat metadata.
+  Future<void> sendMessage(String chatId, String text, String recipientId) async {
+    final String currentUserId = _auth.currentUser!.uid;
+    final Timestamp timestamp = Timestamp.now();
+
     final Message newMessage = Message(
       id: '', // Firestore will generate this
       senderId: currentUserId,
       text: text,
-      timestamp: Timestamp.now(),
+      timestamp: timestamp,
       isRead: false,
     );
-
+    
+    // Add the new message to the messages subcollection
     await _firestore
         .collection('chats')
         .doc(chatId)
         .collection('messages')
         .add(newMessage.toJson());
+
+    // Update the main chat document with the last message info
+    await _firestore.collection('chats').doc(chatId).set({
+      'participants': [currentUserId, recipientId],
+      'lastMessageText': text,
+      'lastMessageTimestamp': timestamp,
+      'lastMessageSenderId': currentUserId,
+    }, SetOptions(merge: true)); // Use merge to create or update
   }
 
-  // --- MARK MESSAGES AS READ ---
   Future<void> markMessagesAsRead(String chatId, String currentUserId) async {
     final querySnapshot = await _firestore
         .collection('chats')
@@ -60,7 +79,6 @@ class ChatService {
     await batch.commit();
   }
 
-  // --- EDIT & DELETE ---
   Future<void> editMessage(String chatId, String messageId, String newText) async {
     await _firestore.collection('chats').doc(chatId).collection('messages').doc(messageId).update({'text': newText, 'isEdited': true});
   }
