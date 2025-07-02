@@ -11,27 +11,23 @@ plugins {
 android {
     namespace = "com.example.extroza"
     compileSdk = flutter.compileSdkVersion
-    
-    // --- FIX #1: NDK Version ---
-    // The error message told us to add this line.
+    // --- FIX: Set the specific NDK version required by the plugins ---
     ndkVersion = "27.0.12077973"
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+        // --- FIX: Enable Core Library Desugaring ---
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+        jvmTarget = "1.8"
     }
 
     defaultConfig {
         applicationId = "com.example.extroza"
-        
-        // --- FIX #2: Min SDK Version ---
-        // We are updating this from 21 to 23, as required by Firebase Auth.
-        minSdk = 23
-        
+        minSdk = 23 // Required for some Firebase packages
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -48,4 +44,9 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // --- FIX: Update the desugaring dependency to the required version ---
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

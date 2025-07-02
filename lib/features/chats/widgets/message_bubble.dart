@@ -18,18 +18,62 @@ class MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     if (message.isDeleted) {
       return _buildDeletedMessage(theme);
     }
 
+    // Check for the new call message type
+    if (message.type == MessageType.call) {
+      return _buildCallMessage(context, theme);
+    }
+
     return GestureDetector(
       onLongPress: onLongPress,
-      child: message.type == MessageType.image 
+      child: message.type == MessageType.image
           ? _buildImageMessage(context, theme)
           : _buildTextMessage(context, theme),
     );
   }
+
+  // --- NEW WIDGET FOR CALL LOGS ---
+  Widget _buildCallMessage(BuildContext context, ThemeData theme) {
+    final bool isVideoCall = message.text.contains('Video');
+    final IconData callIcon = isSentByMe ? Icons.call_made : Icons.call_received;
+    final IconData typeIcon = isVideoCall ? Icons.videocam_rounded : Icons.call_rounded;
+    final String timestamp = DateFormat('HH:mm').format(message.timestamp.toDate());
+
+    return Align(
+      alignment: isSentByMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+        decoration: BoxDecoration(
+          color: theme.dividerColor.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(callIcon, size: 18, color: theme.textTheme.bodySmall?.color),
+            const SizedBox(width: 8),
+            Icon(typeIcon, size: 18, color: theme.textTheme.bodySmall?.color),
+            const SizedBox(width: 8),
+            Text(
+              message.text,
+              style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              timestamp,
+              style: theme.textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
 
   Widget _buildDeletedMessage(ThemeData theme) {
     return Align(
@@ -43,22 +87,27 @@ class MessageBubble extends StatelessWidget {
         ),
         child: Text(
           'This message was deleted',
-          style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey[600]),
+          style:
+              TextStyle(fontStyle: FontStyle.italic, color: Colors.grey[600]),
         ),
       ),
     );
   }
 
   Widget _buildTextMessage(BuildContext context, ThemeData theme) {
-    final formattedTime = DateFormat('HH:mm').format(message.timestamp.toDate());
+    final formattedTime =
+        DateFormat('HH:mm').format(message.timestamp.toDate());
     return Align(
       alignment: isSentByMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+        constraints:
+            BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
         margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
         decoration: BoxDecoration(
-          color: isSentByMe ? theme.colorScheme.primary : theme.colorScheme.secondaryContainer,
+          color: isSentByMe
+              ? theme.colorScheme.primary
+              : theme.colorScheme.secondaryContainer,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),
@@ -75,7 +124,9 @@ class MessageBubble extends StatelessWidget {
               child: Text(
                 message.text,
                 style: TextStyle(
-                  color: isSentByMe ? theme.colorScheme.onPrimary : theme.colorScheme.onSecondaryContainer,
+                  color: isSentByMe
+                      ? theme.colorScheme.onPrimary
+                      : theme.colorScheme.onSecondaryContainer,
                 ),
               ),
             ),
@@ -87,7 +138,10 @@ class MessageBubble extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontStyle: FontStyle.italic,
-                    color: (isSentByMe ? theme.colorScheme.onPrimary : theme.colorScheme.onSecondaryContainer).withOpacity(0.7),
+                    color: (isSentByMe
+                            ? theme.colorScheme.onPrimary
+                            : theme.colorScheme.onSecondaryContainer)
+                        .withOpacity(0.7),
                   ),
                 ),
               ),
@@ -97,7 +151,10 @@ class MessageBubble extends StatelessWidget {
                 formattedTime,
                 style: TextStyle(
                   fontSize: 12,
-                  color: (isSentByMe ? theme.colorScheme.onPrimary : theme.colorScheme.onSecondaryContainer).withOpacity(0.7),
+                  color: (isSentByMe
+                          ? theme.colorScheme.onPrimary
+                          : theme.colorScheme.onSecondaryContainer)
+                      .withOpacity(0.7),
                 ),
               ),
             ),
@@ -105,9 +162,16 @@ class MessageBubble extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(left: 4.0),
                 child: Icon(
-                  message.isRead ? Icons.done_all_rounded : Icons.done_rounded,
+                  message.isRead
+                      ? Icons.done_all_rounded
+                      : Icons.done_rounded,
                   size: 16,
-                  color: message.isRead ? Colors.lightBlueAccent : (isSentByMe ? theme.colorScheme.onPrimary : theme.colorScheme.onSecondaryContainer).withOpacity(0.7),
+                  color: message.isRead
+                      ? Colors.lightBlueAccent
+                      : (isSentByMe
+                              ? theme.colorScheme.onPrimary
+                              : theme.colorScheme.onSecondaryContainer)
+                          .withOpacity(0.7),
                 ),
               ),
           ],

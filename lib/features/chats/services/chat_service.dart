@@ -4,7 +4,7 @@ import 'package:extroza/core/services/storage_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 // Enum to define the type of message.
-enum MessageType { text, image }
+enum MessageType { text, image, call } // Added 'call' type
 
 class ChatService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -22,7 +22,9 @@ class ChatService {
   }
 
   String getChatId(String userId1, String userId2) {
-    return userId1.compareTo(userId2) > 0 ? '$userId1-$userId2' : '$userId2-$userId1';
+    return userId1.compareTo(userId2) > 0
+        ? '$userId1-$userId2'
+        : '$userId2-$userId1';
   }
 
   Stream<QuerySnapshot> getMessagesStream(String chatId) {
@@ -35,19 +37,20 @@ class ChatService {
   }
 
   // --- SEND TEXT MESSAGE ---
-  Future<void> sendTextMessage(String chatId, String text, String recipientId) async {
+  Future<void> sendTextMessage(
+      String chatId, String text, String recipientId) async {
     final String currentUserId = _auth.currentUser!.uid;
     final Timestamp timestamp = Timestamp.now();
 
     final Message newMessage = Message(
-      id: '', 
+      id: '',
       senderId: currentUserId,
       text: text,
       timestamp: timestamp,
-      type: MessageType.text, // Explicitly set type
+      type: MessageType.text,
       isRead: false,
     );
-    
+
     await _firestore
         .collection('chats')
         .doc(chatId)
@@ -62,13 +65,15 @@ class ChatService {
     }, SetOptions(merge: true));
   }
 
-  // --- NEW: SEND IMAGE MESSAGE ---
-  Future<void> sendImageMessage(String chatId, File imageFile, String recipientId) async {
+  // --- SEND IMAGE MESSAGE ---
+  Future<void> sendImageMessage(
+      String chatId, File imageFile, String recipientId) async {
     final String currentUserId = _auth.currentUser!.uid;
     final Timestamp timestamp = Timestamp.now();
 
     // 1. Upload image and get URL
-    String? imageUrl = await _storageService.uploadImageToChat(imageFile, chatId);
+    String? imageUrl =
+        await _storageService.uploadImageToChat(imageFile, chatId);
 
     if (imageUrl != null) {
       // 2. Create message with image URL
@@ -95,8 +100,42 @@ class ChatService {
         'lastMessageTimestamp': timestamp,
         'lastMessageSenderId': currentUserId,
       }, SetOptions(merge: true));
+    } else {
+      // Throw an error if the upload fails
+      throw Exception("Image upload failed.");
     }
   }
+
+  // --- NEW: LOG CALL IN CHAT ---
+  Future<void> logCallInChat(String chatId, String recipientId, bool isVideoCall) async {
+    final String currentUserId = _auth.currentUser!.uid;
+    final Timestamp timestamp = Timestamp.now();
+    final String callTypeString = isVideoCall ? 'Video call' : 'Voice call';
+
+    final Message callMessage = Message(
+      id: '',
+      senderId: currentUserId,
+      text: callTypeString, // Text indicates the type of call
+      timestamp: timestamp,
+      type: MessageType.call, // Set the type to call
+      isRead: false,
+    );
+
+    await _firestore
+        .collection('chats')
+        .doc(chatId)
+        .collection('messages')
+        .add(callMessage.toJson());
+    
+    // Update the main chat document to show the call in the chat list
+    await _firestore.collection('chats').doc(chatId).set({
+      'participants': [currentUserId, recipientId],
+      'lastMessageText': '📞 $callTypeString',
+      'lastMessageTimestamp': timestamp,
+      'lastMessageSenderId': currentUserId,
+    }, SetOptions(merge: true));
+  }
+
 
   Future<void> markMessagesAsRead(String chatId, String currentUserId) async {
     final querySnapshot = await _firestore
@@ -114,12 +153,24 @@ class ChatService {
     await batch.commit();
   }
 
-  Future<void> editMessage(String chatId, String messageId, String newText) async {
-    await _firestore.collection('chats').doc(chatId).collection('messages').doc(messageId).update({'text': newText, 'isEdited': true});
+  Future<void> editMessage(
+      String chatId, String messageId, String newText) async {
+    await _firestore
+        .collection('chats')
+        .doc(chatId)
+        .collection('messages')
+        .doc(messageId)
+        .update({'text': newText, 'isEdited': true});
   }
 
-  Future<void> deleteMessageForEveryone(String chatId, String messageId) async {
-    await _firestore.collection('chats').doc(chatId).collection('messages').doc(messageId).update({'isDeleted': true});
+  Future<void> deleteMessageForEveryone(
+      String chatId, String messageId) async {
+    await _firestore
+        .collection('chats')
+        .doc(chatId)
+        .collection('messages')
+        .doc(messageId)
+        .update({'isDeleted': true});
   }
 }
 
@@ -139,7 +190,7 @@ class Message {
     required this.senderId,
     required this.text,
     required this.timestamp,
-    this.type = MessageType.text, // NEW
+    this.type = MessageType.text,
     this.isEdited = false,
     this.isDeleted = false,
     this.isRead = false,
@@ -152,8 +203,7 @@ class Message {
       senderId: data['senderId'] ?? '',
       text: data['text'] ?? '',
       timestamp: data['timestamp'] ?? Timestamp.now(),
-      // Read the type from Firestore, default to text if not present
-      type: MessageType.values[data['type'] ?? MessageType.text.index], // NEW
+      type: MessageType.values[data['type'] ?? MessageType.text.index],
       isEdited: data['isEdited'] ?? false,
       isDeleted: data['isDeleted'] ?? false,
       isRead: data['isRead'] ?? false,
@@ -165,7 +215,7 @@ class Message {
       'senderId': senderId,
       'text': text,
       'timestamp': timestamp,
-      'type': type.index, // NEW: Store the enum index
+      'type': type.index,
       'isEdited': isEdited,
       'isDeleted': isDeleted,
       'isRead': isRead,

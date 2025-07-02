@@ -1,1 +1,39 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"extroza-app","appId":"1:925103203417:android:5a63b27fe16e222becbd48","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"extroza-app","configurations":{"android":"1:925103203417:android:5a63b27fe16e222becbd48","ios":"1:925103203417:ios:95719c580bceab56ecbd48","macos":"1:925103203417:ios:95719c580bceab56ecbd48","web":"1:925103203417:web:592fade228724e60ecbd48","windows":"1:925103203417:web:6d78d83ece9e0c48ecbd48"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "extroza-app",
+          "appId": "1:925103203417:android:5a63b27fe16e222becbd48",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "extroza-app",
+          "configurations": {
+            "android": "1:925103203417:android:5a63b27fe16e222becbd48",
+            "ios": "1:925103203417:ios:95719c580bceab56ecbd48",
+            "macos": "1:925103203417:ios:95719c580bceab56ecbd48",
+            "web": "1:925103203417:web:592fade228724e60ecbd48",
+            "windows": "1:925103203417:web:6d78d83ece9e0c48ecbd48"
+          }
+        }
+      }
+    }
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": []
+    }
+  ]
+}
