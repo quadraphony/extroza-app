@@ -32,7 +32,6 @@ class CallModel {
     required this.participantIds,
   });
 
-  /// Creates a CallModel instance from a Firestore document snapshot.
   factory CallModel.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
     return CallModel(
@@ -51,7 +50,6 @@ class CallModel {
     );
   }
 
-  /// Converts a CallModel instance into a Map to be stored in Firestore.
   Map<String, dynamic> toMap() {
     return {
       'callerId': callerId,

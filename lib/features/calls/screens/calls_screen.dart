@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:extroza/core/services/database_service.dart';
 import 'package:extroza/features/calls/models/call_model.dart';
 import 'package:extroza/features/calls/screens/call_screen.dart';
-import 'package:extroza/features/calls/services/call_service.dart';
+import 'package:extroza/features/calls/service/call_service.dart';
 import 'package:extroza/features/chats/screens/new_chat_screen.dart';
 import 'package:extroza/models/user_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';

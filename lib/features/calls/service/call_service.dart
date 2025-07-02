@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:extroza/features/calls/models/call_model.dart';
 import 'package:extroza/models/user_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
@@ -9,7 +10,8 @@ class CallService {
   final String _callsCollection = 'calls';
 
   RTCPeerConnection? _peerConnection;
-  MediaStream? _localStream;
+  // This is now a public field, which is correct.
+  MediaStream? localStream;
   Function(MediaStream stream)? onAddRemoteStream;
 
   final Map<String, dynamic> _configuration = {
@@ -17,6 +19,14 @@ class CallService {
       {'urls': 'stun:stun.l.google.com:19302'},
     ]
   };
+
+  Stream<QuerySnapshot> getCallHistoryStream() {
+    return _firestore
+        .collection(_callsCollection)
+        .where('participantIds', arrayContains: _auth.currentUser!.uid)
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+  }
 
   Future<void> makeCall({
     required UserModel receiver,
@@ -30,15 +40,16 @@ class CallService {
         'video': {'facingMode': 'user'}
       };
 
-      _localStream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
-      localRenderer.srcObject = _localStream;
+      // Uses the public localStream variable.
+      localStream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
+      localRenderer.srcObject = localStream;
 
-      _localStream!.getTracks().forEach((track) {
-        _peerConnection!.addTrack(track, _localStream!);
+      localStream!.getTracks().forEach((track) {
+        _peerConnection!.addTrack(track, localStream!);
       });
 
       DocumentReference callDocRef = _firestore.collection(_callsCollection).doc();
-      
+
       _peerConnection!.onIceCandidate = (RTCIceCandidate candidate) {
         callDocRef.collection('callerCandidates').add(candidate.toMap());
       };
@@ -52,12 +63,21 @@ class CallService {
       RTCSessionDescription offer = await _peerConnection!.createOffer();
       await _peerConnection!.setLocalDescription(offer);
 
-      await callDocRef.set({
-        'callerId': _auth.currentUser!.uid,
-        'receiverId': receiver.uid,
-        'offer': offer.toMap(),
-        'callId': callDocRef.id,
-      });
+      final call = CallModel(
+        id: callDocRef.id,
+        callerId: _auth.currentUser!.uid,
+        callerName: _auth.currentUser!.displayName ?? 'Unknown',
+        receiverId: receiver.uid,
+        receiverName: receiver.fullName,
+        type: CallType.video,
+        status: CallStatus.outgoing,
+        timestamp: Timestamp.now(),
+        participantIds: [_auth.currentUser!.uid, receiver.uid],
+      );
+
+      await callDocRef.set(call.toMap());
+      await callDocRef.update({'offer': offer.toMap()});
+
 
       callDocRef.collection('receiverCandidates').snapshots().listen((snapshot) {
         snapshot.docChanges.forEach((change) {
@@ -99,11 +119,11 @@ class CallService {
         'video': {'facingMode': 'user'}
       };
 
-      _localStream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
-      localRenderer.srcObject = _localStream;
+      localStream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
+      localRenderer.srcObject = localStream;
 
-      _localStream!.getTracks().forEach((track) {
-        _peerConnection!.addTrack(track, _localStream!);
+      localStream!.getTracks().forEach((track) {
+        _peerConnection!.addTrack(track, localStream!);
       });
 
       DocumentReference callDocRef = _firestore.collection(_callsCollection).doc(callId);
@@ -144,9 +164,9 @@ class CallService {
 
   Future<void> hangUp(RTCVideoRenderer localRenderer) async {
     try {
-      if (_localStream != null) {
-        _localStream!.getTracks().forEach((track) => track.stop());
-        _localStream = null;
+      if (localStream != null) {
+        localStream!.getTracks().forEach((track) => track.stop());
+        localStream = null;
       }
       if (_peerConnection != null) {
         await _peerConnection!.close();

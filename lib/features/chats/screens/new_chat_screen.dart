@@ -1,6 +1,5 @@
 import 'package:extroza/core/services/database_service.dart';
-import 'package:extroza/features/calls/models/call_model.dart';
-import 'package:extroza/features/calls/screens/calls_screen.dart';
+import 'package:extroza/features/calls/screens/call_screen.dart';
 import 'package:extroza/features/chats/models/chat_model.dart';
 import 'package:extroza/features/chats/screens/individual_chat_screen.dart';
 import 'package:extroza/models/user_model.dart';
@@ -118,7 +117,6 @@ class _NewChatScreenState extends State<NewChatScreen> {
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // For now, we only implement video calls. Voice-only can be added later.
                     IconButton(
                       icon: Icon(Icons.videocam, color: Theme.of(context).primaryColor),
                       onPressed: () => _handleCall(context, user),
