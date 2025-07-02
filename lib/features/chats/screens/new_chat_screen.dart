@@ -1,8 +1,12 @@
 import 'package:extroza/core/services/database_service.dart';
+import 'package:extroza/features/calls/models/call_model.dart';
+import 'package:extroza/features/calls/screens/calls_screen.dart';
 import 'package:extroza/features/chats/models/chat_model.dart';
 import 'package:extroza/features/chats/screens/individual_chat_screen.dart';
 import 'package:extroza/models/user_model.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class NewChatScreen extends StatefulWidget {
   const NewChatScreen({super.key});
@@ -14,11 +18,47 @@ class NewChatScreen extends StatefulWidget {
 class _NewChatScreenState extends State<NewChatScreen> {
   final DatabaseService _db = DatabaseService();
   late Future<List<UserModel>> _usersFuture;
+  UserModel? _currentUser;
 
   @override
   void initState() {
     super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      _currentUser = await _db.getUserProfile(uid);
+    }
     _usersFuture = _db.getUsers();
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  /// Handles call initiation after checking for necessary permissions.
+  Future<void> _handleCall(BuildContext context, UserModel userToCall) async {
+    // Request camera and microphone permissions
+    final cameraStatus = await Permission.camera.request();
+    final micStatus = await Permission.microphone.request();
+
+    // Check if permissions were granted before proceeding
+    if (cameraStatus.isGranted && micStatus.isGranted) {
+       if (_currentUser != null) {
+         // Navigate to the CallScreen to start the call
+         Navigator.of(context).push(
+           MaterialPageRoute(
+             builder: (_) => CallScreen(receiver: userToCall),
+           ),
+         );
+       }
+    } else {
+       // Show a message if permissions are denied
+       ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Camera and Microphone permissions are required to make calls.'))
+      );
+    }
   }
 
   String getInitials(String name) {
@@ -38,12 +78,12 @@ class _NewChatScreenState extends State<NewChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('New Chat'),
+        title: const Text('Start a Conversation'),
       ),
       body: FutureBuilder<List<UserModel>>(
         future: _usersFuture,
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (snapshot.connectionState == ConnectionState.waiting || _currentUser == null) {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
@@ -75,16 +115,25 @@ class _NewChatScreenState extends State<NewChatScreen> {
                 ),
                 title: Text(user.fullName),
                 subtitle: Text(user.username),
-                onTap: () {
-                  // Create a Chat object to pass to the chat screen
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // For now, we only implement video calls. Voice-only can be added later.
+                    IconButton(
+                      icon: Icon(Icons.videocam, color: Theme.of(context).primaryColor),
+                      onPressed: () => _handleCall(context, user),
+                    ),
+                  ],
+                ),
+                 onTap: () {
                   final chat = Chat(
                     otherUserId: user.uid,
                     name: user.fullName,
                     avatarUrl: user.profilePictureUrl ?? '',
-                    lastMessage: '', // Not needed for a new chat
-                    timestamp: '',   // Not needed for a new chat
+                    lastMessage: '',
+                    timestamp: '',
                   );
-                  Navigator.of(context).pushReplacement(
+                  Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) => IndividualChatScreen(chat: chat),
                     ),

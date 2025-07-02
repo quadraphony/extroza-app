@@ -13,6 +13,7 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
+  // This list holds the different screens for the bottom navigation bar.
   static const List<Widget> _widgetOptions = <Widget>[
     ChatsScreen(),
     CallsScreen(),
@@ -31,21 +32,13 @@ class _MainScreenState extends State<MainScreen> {
       body: Center(
         child: _widgetOptions.elementAt(_selectedIndex),
       ),
-      // --- UPDATED WIDGET ---
-      // We are now using the Material 3 NavigationBar
       bottomNavigationBar: NavigationBar(
-        // The selectedIndex determines which tab is active.
         selectedIndex: _selectedIndex,
-        // The onDestinationSelected callback updates the state when a new tab is tapped.
         onDestinationSelected: _onItemTapped,
-        // The indicatorColor gives the "pill" shape its color.
         indicatorColor: Theme.of(context).colorScheme.primaryContainer,
-        // The list of destinations (tabs).
         destinations: const <NavigationDestination>[
           NavigationDestination(
-            // The icon to show when the tab is selected.
             selectedIcon: Icon(Icons.chat_bubble_rounded),
-            // The icon to show when the tab is not selected.
             icon: Icon(Icons.chat_bubble_outline_rounded),
             label: 'Chats',
           ),
