@@ -1,11 +1,19 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
+import 'package:extroza/features/calls/screens/call_screen.dart';
 import 'package:extroza/features/chats/models/chat_model.dart';
 import 'package:extroza/features/chats/services/chat_service.dart';
 import 'package:extroza/features/chats/widgets/message_bubble.dart';
+import 'package:extroza/models/user_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/foundation.dart' as foundation;
+
 
 class IndividualChatScreen extends StatefulWidget {
   final Chat chat;
@@ -21,19 +29,56 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
   final String _currentUserId = FirebaseAuth.instance.currentUser!.uid; 
 
   late final String _chatId;
+  bool _showEmojiPicker = false;
+  final FocusNode _focusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
     _chatId = _chatService.getChatId(_currentUserId, widget.chat.otherUserId);
     _chatService.markMessagesAsRead(_chatId, _currentUserId);
+    _focusNode.addListener(() {
+      if (_focusNode.hasFocus) {
+        setState(() {
+          _showEmojiPicker = false;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    _focusNode.dispose();
+    super.dispose();
   }
 
   void _handleSendPressed() {
     if (_textController.text.isNotEmpty) {
-      // Pass the recipient's ID to the service
-      _chatService.sendMessage(_chatId, _textController.text, widget.chat.otherUserId);
+      _chatService.sendTextMessage(_chatId, _textController.text, widget.chat.otherUserId);
       _textController.clear();
+    }
+  }
+  
+  void _handleImageSelection() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      _chatService.sendImageMessage(_chatId, File(pickedFile.path), widget.chat.otherUserId);
+    }
+  }
+
+  void _handleCall(bool isVideoCall) async {
+    final permission = isVideoCall ? Permission.camera : Permission.microphone;
+    if (await permission.request().isGranted) {
+       final receiverUser = UserModel(uid: widget.chat.otherUserId, fullName: widget.chat.name, username: '', nickname: '');
+       Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => CallScreen(receiver: receiverUser),
+      ));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${isVideoCall ? "Camera" : "Microphone"} permission is required.'))
+      );
     }
   }
   
@@ -71,16 +116,17 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
         return SafeArea(
           child: Wrap(
             children: [
-              ListTile(
-                leading: const Icon(Icons.copy_rounded),
-                title: const Text('Copy Text'),
-                onTap: () {
-                  Clipboard.setData(ClipboardData(text: message.text));
-                  Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Copied to clipboard')));
-                },
-              ),
-              if (isMyMessage)
+              if (message.type == MessageType.text)
+                ListTile(
+                  leading: const Icon(Icons.copy_rounded),
+                  title: const Text('Copy Text'),
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: message.text));
+                    Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Copied to clipboard')));
+                  },
+                ),
+              if (isMyMessage && message.type == MessageType.text)
                 ListTile(
                   leading: const Icon(Icons.edit_rounded),
                   title: const Text('Edit'),
@@ -116,7 +162,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
     } else if (date.year == yesterday.year && date.month == yesterday.month && date.day == yesterday.day) {
       return 'Yesterday';
     } else {
-      return DateFormat('d MMMM yyyy').format(date);
+      return DateFormat('d MMMM yy').format(date);
     }
   }
 
@@ -132,8 +178,8 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
           ],
         ),
         actions: [
-          IconButton(icon: const Icon(Icons.videocam_rounded), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.call_rounded), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.call_rounded), onPressed: () => _handleCall(false)),
+          IconButton(icon: const Icon(Icons.videocam_rounded), onPressed: () => _handleCall(true)),
         ],
       ),
       body: Column(
@@ -189,6 +235,7 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
             ),
           ),
           _buildTextInputArea(),
+          if (_showEmojiPicker) _buildEmojiPicker(),
         ],
       ),
     );
@@ -204,9 +251,17 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
         ),
         child: Row(
           children: [
-            IconButton(icon: const Icon(Icons.add_rounded), onPressed: () {}),
+            IconButton(icon: const Icon(Icons.add_rounded), onPressed: _handleImageSelection),
+            IconButton(
+              icon: Icon(Icons.emoji_emotions_outlined, color: Theme.of(context).iconTheme.color),
+              onPressed: () {
+                _focusNode.unfocus();
+                setState(() => _showEmojiPicker = !_showEmojiPicker);
+              },
+            ),
             Expanded(
               child: TextField(
+                focusNode: _focusNode,
                 controller: _textController,
                 decoration: InputDecoration(
                   hintText: 'Message...',
@@ -226,6 +281,38 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
               onPressed: _handleSendPressed,
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmojiPicker() {
+    return SizedBox(
+      height: 250,
+      child: EmojiPicker(
+        onEmojiSelected: (category, emoji) {
+          _textController.text += emoji.emoji;
+        },
+        config: const Config(
+          // FIX: Removed incompatible 'columns' parameter.
+          verticalSpacing: 0,
+          horizontalSpacing: 0,
+          bgColor: Color(0xFFF2F2F2),
+          indicatorColor: Colors.blue,
+          iconColor: Colors.grey,
+          iconColorSelected: Colors.blue,
+          progressIndicatorColor: Colors.blue,
+          backspaceColor: Colors.blue,
+          skinToneDialogBgColor: Colors.white,
+          skinToneIndicatorColor: Colors.grey,
+          enableSkinTones: true,
+          showRecentsTab: true,
+          recentsLimit: 28,
+          noRecentsText: "No Recents",
+          noRecentsStyle: TextStyle(fontSize: 20, color: Colors.black26),
+          tabIndicatorAnimDuration: kTabScrollDuration,
+          categoryIcons: CategoryIcons(),
+          buttonMode: ButtonMode.MATERIAL,
         ),
       ),
     );

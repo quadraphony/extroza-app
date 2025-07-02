@@ -18,7 +18,6 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   final String? _uid = FirebaseAuth.instance.currentUser?.uid;
   bool _isSaving = false;
 
-  // We'll use these to hold the state of the profile data
   late String _fullName;
   late String _nickname;
   late String _bio;
@@ -73,14 +72,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     }
   }
 
-  // A generic function to show an editing bottom sheet
   Future<void> _showEditBottomSheet(
       String title, String initialValue, String fieldKey) async {
     final controller = TextEditingController(text: initialValue);
 
     await showModalBottomSheet(
       context: context,
-      isScrollControlled: true, // Important for keyboard to not cover the sheet
+      isScrollControlled: true, 
       builder: (context) {
         return Padding(
           padding: EdgeInsets.only(
@@ -114,14 +112,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                     await _db
                         .updateUserProfile(_uid!, {fieldKey: controller.text});
                     
-                    // Update the local state to reflect the change immediately
                     setState(() {
                       if (fieldKey == 'fullName') _fullName = controller.text;
                       if (fieldKey == 'nickname') _nickname = controller.text;
                       if (fieldKey == 'bio') _bio = controller.text;
                       _isSaving = false;
                     });
-                    Navigator.of(context).pop(); // Close the bottom sheet
+                    Navigator.of(context).pop(); 
                   }
                 },
               ),
@@ -152,6 +149,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     final bool hasRemoteImage = widget.user.profilePictureUrl != null &&
         widget.user.profilePictureUrl!.isNotEmpty;
 
+    // --- FIX: Determine the ImageProvider outside the widget ---
+    ImageProvider? backgroundImage;
+    if (hasLocalImage) {
+      backgroundImage = FileImage(_profileImage!);
+    } else if (hasRemoteImage) {
+      backgroundImage = NetworkImage(widget.user.profilePictureUrl!);
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Edit Profile'),
@@ -166,12 +171,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                   radius: 60,
                   backgroundColor:
                       Theme.of(context).primaryColor.withOpacity(0.1),
-                  backgroundImage: hasLocalImage
-                      ? FileImage(_profileImage!)
-                      : hasRemoteImage
-                          ? NetworkImage(widget.user.profilePictureUrl!)
-                          : null,
-                  child: !hasLocalImage && !hasRemoteImage
+                  // Use the pre-determined ImageProvider
+                  backgroundImage: backgroundImage,
+                  child: (backgroundImage == null)
                       ? Text(
                           getInitials(_fullName),
                           style: TextStyle(
